@@ -85,3 +85,15 @@ export function formatShortDate(date: IsoDate): string {
   const { month, day } = monthDay(date)
   return `${month} 月 ${day} 日`
 }
+
+/** 出刊时刻：「9:41」。入参是 timestamptz 字符串。 */
+export function formatClockInAppZone(timestamp: string): string {
+  const at = new Date(timestamp)
+  if (Number.isNaN(at.getTime())) return ''
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: APP_TIME_ZONE,
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: false,
+  }).format(at)
+}
