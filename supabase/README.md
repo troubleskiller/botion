@@ -31,9 +31,24 @@ done
 
 ## 与 dev-spec 的三处差异
 
-1. **`app_today()`** —— dev-spec 用 `current_date`，走 DB 会话时区（UTC）。
-   东八区每天有 8 小时的「今天」会算错。视图和 RLS 统一用 `Asia/Shanghai`
-   的日历日，前端 `lib/date.ts` 的 `todayInAppZone()` 是同一个定义。
+1. **「今天」按人算** —— dev-spec 用 `current_date`，走 DB 会话时区
+   （Supabase 默认 UTC），东八区每天有 8 小时的「今天」会算错。而且朋友圈里
+   有人在国外，所以 `profiles` 加了一列 `time_zone`：
+
+   - `zone_today(tz)` —— 某个时区的日历日。视图用它按各人的时区判断
+     `checked_in_today` 和 `state`
+   - `user_today()` —— 当前登录用户自己时区里的今天。`entries` 的补卡窗口用它
+   - 前端 `lib/date.ts` 的 `todayInZone()` 是同一个定义
+
+   `time_zone` 为 null 表示还没确定过，首次登录时前端探测一次写进来，
+   之后再也不动 —— 出差旅行不该把「今天」挪走，那会白断一期。
+   首次登录正好在国外的话，改那一行就行：
+
+   ```sql
+   update profiles set time_zone = 'America/New_York' where display_name = '某某';
+   ```
+
+   时区本身不出 `public_status` 视图。
 
 2. **`entries` 的策略从一条拆成四条** —— SELECT 不能有日期窗口（档位要数
    全部历史），INSERT / UPDATE 必须有（规则 4：补卡只能补前一天）。

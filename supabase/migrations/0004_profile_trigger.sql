@@ -32,7 +32,7 @@ end
 $$;
 
 comment on function public.handle_new_user() is
-  'Magic Link 首次登录时自动建 profiles 行。avatar_key 默认 friend；首页自己的主位固定用 you 素材。';
+  'Magic Link 首次登录时自动建 profiles 行。avatar_key 默认 friend（首页自己的主位固定用 you 素材）；time_zone 留 null，首次登录时前端探测一次写进来。';
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created

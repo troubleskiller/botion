@@ -107,7 +107,8 @@ export function stageFillRatio(total: number): number {
  *
  * dev-spec 的签名只有 dates 一个参数，但「今天」必须由调用方传入，
  * 否则函数要读系统时钟就不是纯函数了（第 5 节明确要求纯函数 + 单测）。
- * today 用 lib/date.ts 的 todayInAppZone() 取，和库里的 app_today() 同源。
+ * today 用 lib/date.ts 的 todayInZone(now, 本人时区) 取，和库里的
+ * zone_today() / user_today() 同源 —— 朋友圈里有人在国外，「今天」按人算。
  *
  * 「从今天或昨天往前数」的意思：今天还没出刊不算断链 —— 昨天出过就从昨天数。
  * 前天才断。

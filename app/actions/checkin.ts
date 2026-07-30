@@ -1,7 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { isWritableDate, todayInAppZone, type IsoDate } from '@/lib/date'
+import { isWritableDate, todayInZone, type IsoDate } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
 
 export type PublishResult = { ok: true } | { ok: false; message: string }
@@ -35,7 +35,17 @@ export async function publishEntry(input: PublishInput): Promise<PublishResult> 
     return { ok: false, message: '登录过期了。回登录页重新发一条链接' }
   }
 
-  const today = todayInAppZone(new Date())
+  // 「今天」按本人时区算 —— 在国外的朋友「昨天」和国内不是同一天。
+  // 库里的 RLS 窗口用 user_today()，是同一个定义。
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('time_zone')
+    .eq('id', user.id)
+    .maybeSingle()
+  const rawTimeZone: unknown = profile?.time_zone
+  const timeZone = typeof rawTimeZone === 'string' && rawTimeZone !== '' ? rawTimeZone : null
+
+  const today = todayInZone(new Date(), timeZone)
   if (!isWritableDate(input.date, today)) {
     return { ok: false, message: '只能出今天或昨天的刊，更早的改不了' }
   }

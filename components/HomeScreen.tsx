@@ -76,12 +76,7 @@ export function HomeScreen(props: HomeScreenProps) {
     <div className="bg-paper flex h-dvh flex-col overflow-hidden">
       <div className="pt-safe flex-none" />
 
-      <Masthead
-        date={props.today}
-        issue={issue}
-        friendCount={props.friends.length}
-        bumpIssue={reveal !== null}
-      />
+      <Masthead date={props.today} issue={issue} bumpIssue={reveal !== null} />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {/* 主位：左侧状态与档位，右侧小人 */}

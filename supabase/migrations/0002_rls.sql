@@ -35,6 +35,8 @@ create policy "own profile writable" on public.profiles
 --   · SELECT 不能有日期窗口 —— 体型档位要数全部历史的累计训练次数
 --   · INSERT / UPDATE 必须有日期窗口 —— 第 5 节规则 4「补卡只能补前一天」
 --     和第 11 节验收第 5 条要求库里就拒绝，不能只靠 UI 挡
+-- 窗口用 user_today()，也就是写入者自己时区里的今天 —— 在国外的朋友
+-- 「昨天」和国内不是同一天。
 drop policy if exists "own entries"               on public.entries;
 drop policy if exists "entries select own"        on public.entries;
 drop policy if exists "entries insert own recent" on public.entries;
@@ -49,21 +51,21 @@ create policy "entries insert own recent" on public.entries
   for insert to authenticated
   with check (
     auth.uid() = user_id
-    and "date" >= (public.app_today() - 1)
-    and "date" <= public.app_today()
+    and "date" >= (public.user_today() - 1)
+    and "date" <= public.user_today()
   );
 
 create policy "entries update own recent" on public.entries
   for update to authenticated
   using (
     auth.uid() = user_id
-    and "date" >= (public.app_today() - 1)
-    and "date" <= public.app_today()
+    and "date" >= (public.user_today() - 1)
+    and "date" <= public.user_today()
   )
   with check (
     auth.uid() = user_id
-    and "date" >= (public.app_today() - 1)
-    and "date" <= public.app_today()
+    and "date" >= (public.user_today() - 1)
+    and "date" <= public.user_today()
   );
 
 create policy "entries delete own" on public.entries

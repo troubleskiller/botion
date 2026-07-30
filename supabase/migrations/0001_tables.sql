@@ -5,34 +5,61 @@
 -- 在 Supabase SQL Editor 里粘重复了也不会炸。
 -- ════════════════════════════════════════════════════════════════════════
 
--- ── App 的「今天」 ──────────────────────────────────────────────────────
+-- ── 「今天」是谁的今天 ─────────────────────────────────────────────────
 -- dev-spec 没写时区。Postgres 的 current_date 走 DB 会话时区，Supabase 默认
 -- UTC —— 东八区每天有 8 小时的「今天」会算错，直接影响 checked_in_today
 -- 和补卡窗口（晚上 8 点打卡会被记成前一天）。
 --
--- 视图和 RLS 策略一律用这个函数，前端用 lib/date.ts 的 todayInAppZone()。
--- 两边必须是同一个定义，改一处就要改另一处。
-create or replace function public.app_today()
+-- 而且朋友圈里有人在国外，所以「今天」是按人算的：每个 profile 存自己的
+-- 时区，视图按各人的时区判断今日状态，补卡窗口按写入者自己的时区。
+-- 前端用 lib/date.ts 的 todayInZone()，和这里必须是同一个定义。
+
+/** 某个时区的日历日。tz 为 null 时回落到默认时区。 */
+create or replace function public.zone_today(tz text)
 returns date
 language sql
 stable
 set search_path = pg_catalog
-as $$ select ((now() at time zone 'Asia/Shanghai')::date) $$;
+as $$ select ((now() at time zone coalesce(tz, 'Asia/Shanghai'))::date) $$;
 
-comment on function public.app_today() is
-  'App 的日历日（Asia/Shanghai）。与前端 lib/date.ts 的 todayInAppZone() 同源。';
+/**
+ * 当前登录用户的「今天」。给 entries 的 RLS 日期窗口用 ——
+ * 策略表达式里只拿得到 auth.uid()，所以时区要在这里查出来。
+ * security definer：只返回一个 date，不漏任何数据，但不依赖调用方
+ * 对 profiles 的读权限。
+ */
+create or replace function public.user_today()
+returns date
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select public.zone_today((select p.time_zone from public.profiles p where p.id = auth.uid()))
+$$;
+
+comment on function public.zone_today(text) is
+  '某个时区的日历日。与前端 lib/date.ts 的 todayInZone() 同源。';
+comment on function public.user_today() is
+  '当前登录用户自己时区里的今天。entries 的补卡窗口用它。';
 
 -- ── 用户档案 ───────────────────────────────────────────────────────────
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text not null,
   avatar_key text not null,              -- 对应 public/avatars/{key}_N.png
+  -- IANA 时区名。null = 还没确定过 —— 首次登录时前端探测一次写进来，
+  -- 之后再也不动（出差旅行不该把「今天」挪走，那会白断一期）。
+  time_zone text,
   sex text check (sex in ('male','female')),
   birth_year int,
   height_cm numeric,
   activity_factor numeric default 1.375,
   created_at timestamptz default now()
 );
+
+-- 老库补列（重跑迁移时用得上）
+alter table public.profiles add column if not exists time_zone text;
 
 -- ── 每日核心打卡（唯一影响小人状态的数据）──────────────────────────────
 create table if not exists public.entries (

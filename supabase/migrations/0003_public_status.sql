@@ -8,6 +8,9 @@
 -- 这是整个隐私边界的关键一环：朋友横排的数据来源只有这个视图，
 -- 视图里没有的东西，前端就算写错也拿不到。
 --
+-- 「今日」按各人自己的时区算（zone_today(p.time_zone)）—— 在国外的朋友
+-- 打卡了就该显示打卡了，不该按国内的日历判。时区本身不出视图。
+--
 -- 注意 Supabase 的 linter 会把 security_invoker = off 标成
 -- security_definer_view 警告 —— 这里是刻意的，见上。
 -- ════════════════════════════════════════════════════════════════════════
@@ -27,7 +30,7 @@ select
    from public.entries e where e.user_id = p.id and e.trained) as stage,
   -- 今日是否出刊
   exists (select 1 from public.entries e
-          where e.user_id = p.id and e."date" = public.app_today()) as checked_in_today,
+          where e.user_id = p.id and e."date" = public.zone_today(p.time_zone)) as checked_in_today,
   -- 今日状态：未打卡时为 null，前端渲染成灰色剪影 +「还没出刊」。
   -- 这段 case 与 lib/logic.ts 的 computeState 逐格对应，
   -- logic.test.ts 里有 12 格全枚举表锁住 —— 改这里就要改那边。
@@ -37,7 +40,7 @@ select
      when e.sleep_band = 2 and e.water_band = 1 then 'tired'
      else 'neutral' end
    from public.entries e
-   where e.user_id = p.id and e."date" = public.app_today()) as state
+   where e.user_id = p.id and e."date" = public.zone_today(p.time_zone)) as state
 from public.profiles p;
 
 comment on view public.public_status is

@@ -2,21 +2,24 @@
  * 日期工具。全部是纯函数：需要「现在」的地方一律由调用方把 Date 传进来，
  * 好让测试不依赖系统时钟。
  *
- * 时区说明（dev-spec 未覆盖，按确认过的假设实现）：
- * Postgres 的 current_date 走 DB 会话时区（通常 UTC），对 UTC+8 的用户
- * 每天有 8 小时的「今天」是错的，会直接影响 checked_in_today 和补卡窗口。
- * 所以库里建了 app_today() 返回 Asia/Shanghai 的日历日，前端用这里的
- * todayInAppZone() 保持同一个定义。两边必须一致，改一处就要改另一处。
+ * 时区说明（dev-spec 未覆盖）：
+ * Postgres 的 current_date 走 DB 会话时区（Supabase 默认 UTC），对 UTC+8
+ * 的用户每天有 8 小时的「今天」是错的 —— 晚上 8 点打卡会被记成前一天，
+ * checked_in_today 和补卡窗口全错。
+ *
+ * 而且朋友圈里有人在国外，所以「今天」是按人算的：每个 profile 存自己的
+ * time_zone，库里对应 zone_today(tz) 和 user_today()。这里的 todayInZone()
+ * 必须和它们是同一个定义 —— 改一处就要改另一处。
  */
-export const APP_TIME_ZONE = 'Asia/Shanghai'
+export const DEFAULT_TIME_ZONE = 'Asia/Shanghai'
 
 /** YYYY-MM-DD 的日历日字符串。不带时间、不带时区。 */
 export type IsoDate = string
 
-/** 取 App 时区下的今天。与库里的 app_today() 同义。 */
-export function todayInAppZone(now: Date): IsoDate {
+/** 取某个时区下的今天。tz 为 null 时回落到默认时区。与库里的 zone_today() 同义。 */
+export function todayInZone(now: Date, timeZone: string | null): IsoDate {
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: APP_TIME_ZONE,
+    timeZone: timeZone ?? DEFAULT_TIME_ZONE,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -26,6 +29,26 @@ export function todayInAppZone(now: Date): IsoDate {
     parts.find((p) => p.type === type)?.value ?? ''
 
   return `${pick('year')}-${pick('month')}-${pick('day')}`
+}
+
+/**
+ * 浏览器所在的 IANA 时区。只在首次登录（profiles.time_zone 还是 null）时
+ * 探测一次并写进档案，之后再也不动 —— 出差旅行不该把「今天」挪走，
+ * 那会白断一期。首次登录正好在国外的话，改库里那一行就行。
+ */
+export function detectTimeZone(): string {
+  const detected = Intl.DateTimeFormat().resolvedOptions().timeZone
+  return detected === '' ? DEFAULT_TIME_ZONE : detected
+}
+
+/** 时区名是否被当前运行时认识。防止往库里写一个 Intl 不认的字符串。 */
+export function isKnownTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date(0))
+    return true
+  } catch {
+    return false
+  }
 }
 
 /** 日历日加减天数。把 YYYY-MM-DD 当作 UTC 零点处理，跨月跨年跨闰年都对。 */
@@ -86,12 +109,12 @@ export function formatShortDate(date: IsoDate): string {
   return `${month} 月 ${day} 日`
 }
 
-/** 出刊时刻：「9:41」。入参是 timestamptz 字符串。 */
-export function formatClockInAppZone(timestamp: string): string {
+/** 出刊时刻：「9:41」。入参是 timestamptz 字符串，按本人时区显示。 */
+export function formatClock(timestamp: string, timeZone: string | null): string {
   const at = new Date(timestamp)
   if (Number.isNaN(at.getTime())) return ''
   return new Intl.DateTimeFormat('en-GB', {
-    timeZone: APP_TIME_ZONE,
+    timeZone: timeZone ?? DEFAULT_TIME_ZONE,
     hour: 'numeric',
     minute: '2-digit',
     hour12: false,

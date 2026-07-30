@@ -44,9 +44,9 @@ function section(title) {
   console.log(`\n${title}`)
 }
 
-function appToday(offsetDays = 0) {
+function appToday(offsetDays = 0, timeZone = 'Asia/Shanghai') {
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Shanghai',
+    timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -220,6 +220,37 @@ async function main() {
   }
   await admin.from('entries').upsert(idle, { onConflict: 'user_id,date' })
   check('再加 19 天没练，档位仍是 2 档（只涨不跌）', (await stageOf()) === 2, `实际 ${await stageOf()} 档`)
+
+  // ── 按人存的时区：库和前端必须算出同一个「今天」 ─────────────────────
+  section('时区按人算 · 库里的 user_today() 与前端的 todayInZone() 一致')
+
+  // 挑一个和东八区差得最远的时区，这样如果两边不一致一定会露馅
+  const FAR = 'Pacific/Kiritimati' // UTC+14
+  await admin.from('profiles').update({ time_zone: FAR }).eq('id', a.id)
+
+  const farToday = appToday(0, FAR)
+  const farTwoDaysAgo = appToday(-2, FAR)
+
+  // 先把可能挡路的历史行清掉，免得 upsert 走成 UPDATE 混淆结论
+  await admin.from('entries').delete().eq('user_id', a.id).in('date', [farToday, farTwoDaysAgo])
+
+  const farOk = await clientA
+    .from('entries')
+    .insert({ user_id: a.id, date: farToday, sleep_band: 3, water_band: 2, trained: false })
+  check(`改成 ${FAR} 后，该时区的今天（${farToday}）能写`, farOk.error === null,
+    `${farOk.error?.message} —— 库里的 user_today() 和前端的 todayInZone() 算出来不一样`)
+
+  const farReject = await clientA
+    .from('entries')
+    .insert({ user_id: a.id, date: farTwoDaysAgo, sleep_band: 3, water_band: 2, trained: false })
+  check(`该时区的前天（${farTwoDaysAgo}）仍被拒绝`, farReject.error !== null, '居然写进去了')
+
+  // 视图的 checked_in_today 也要按 A 自己的时区判
+  const farView = await clientB.from('public_status').select('checked_in_today').eq('user_id', a.id)
+  check(`视图按 A 自己的时区判定今日已出刊`, (farView.data ?? [])[0]?.checked_in_today === true,
+    `实际 ${(farView.data ?? [])[0]?.checked_in_today}`)
+
+  await admin.from('profiles').update({ time_zone: null }).eq('id', a.id)
 
   // ── anon 什么都读不到 ───────────────────────────────────────────────
   section('未登录（anon）读不到任何东西')

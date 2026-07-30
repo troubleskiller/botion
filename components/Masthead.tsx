@@ -5,17 +5,19 @@ import { ThickThinRule } from './Rule'
  * 报头。设计稿的核心判断：连续打卡天数 = 期号。
  * 「第 47 期」印在报头 —— 数天数不像考核，像一份连续出刊的记录，
  * 断了也只是少了一期，不是失败。
+ *
+ * 设计稿右上角原本还有「19 位朋友」，去掉了：验收第 2 条要求朋友那部分
+ * 不出现任何数字，一个纯统计的人数不值得为它留一个暧昧地带。
+ * 期号留着 —— 那是自己的记录，不是别人的数据。
  */
 export function Masthead({
   date,
   issue,
-  friendCount,
   bumpIssue = false,
 }: {
   date: IsoDate
   /** 期号 = 连续出刊天数。0 表示还没出过刊。 */
   issue: number
-  friendCount: number
   /** 出刊瞬间给期号一个翻页动画 */
   bumpIssue?: boolean
 }) {
@@ -49,9 +51,6 @@ export function Masthead({
         ) : (
           <div className="text-ds-11.5 text-neutral-700">还没出过刊 · 今天可以是第一期</div>
         )}
-        {friendCount > 0 ? (
-          <span className="text-ds-11 text-neutral-700">{friendCount} 位朋友</span>
-        ) : null}
       </div>
     </header>
   )

@@ -1,34 +1,87 @@
 import { describe, expect, it } from 'vitest'
 import {
-  APP_TIME_ZONE,
+  DEFAULT_TIME_ZONE,
+  formatClock,
   formatMastheadDate,
   formatSheetDate,
   formatShortDate,
+  isKnownTimeZone,
   isWritableDate,
   shiftDate,
-  todayInAppZone,
+  todayInZone,
 } from './date'
 
-describe('todayInAppZone', () => {
-  it('时区是 Asia/Shanghai', () => {
-    expect(APP_TIME_ZONE).toBe('Asia/Shanghai')
+const SH = 'Asia/Shanghai'
+
+describe('todayInZone', () => {
+  it('默认时区是 Asia/Shanghai', () => {
+    expect(DEFAULT_TIME_ZONE).toBe('Asia/Shanghai')
   })
 
   it('UTC 当天的 16:00 之后已经是东八区的第二天', () => {
     // 这就是不能用 current_date（UTC）的原因：晚上 8 点打卡，
     // 按 UTC 算会记成前一天，checked_in_today 和补卡窗口全错。
-    expect(todayInAppZone(new Date('2026-07-30T15:59:59Z'))).toBe('2026-07-30')
-    expect(todayInAppZone(new Date('2026-07-30T16:00:00Z'))).toBe('2026-07-31')
+    expect(todayInZone(new Date('2026-07-30T15:59:59Z'), SH)).toBe('2026-07-30')
+    expect(todayInZone(new Date('2026-07-30T16:00:00Z'), SH)).toBe('2026-07-31')
   })
 
   it('东八区的一天从 UTC 前一天的 16:00 开始', () => {
-    expect(todayInAppZone(new Date('2026-07-29T16:00:00Z'))).toBe('2026-07-30')
-    expect(todayInAppZone(new Date('2026-07-30T15:00:00Z'))).toBe('2026-07-30')
+    expect(todayInZone(new Date('2026-07-29T16:00:00Z'), SH)).toBe('2026-07-30')
+    expect(todayInZone(new Date('2026-07-30T15:00:00Z'), SH)).toBe('2026-07-30')
   })
 
   it('输出补零的 YYYY-MM-DD', () => {
-    expect(todayInAppZone(new Date('2026-01-05T03:00:00Z'))).toBe('2026-01-05')
-    expect(todayInAppZone(new Date('2026-12-31T20:00:00Z'))).toBe('2027-01-01')
+    expect(todayInZone(new Date('2026-01-05T03:00:00Z'), SH)).toBe('2026-01-05')
+    expect(todayInZone(new Date('2026-12-31T20:00:00Z'), SH)).toBe('2027-01-01')
+  })
+
+  it('null 回落到默认时区', () => {
+    const at = new Date('2026-07-30T16:00:00Z')
+    expect(todayInZone(at, null)).toBe(todayInZone(at, SH))
+  })
+
+  it('同一瞬间在不同时区是不同的「今天」', () => {
+    // 这就是要按人存时区的原因：国内已经是 31 号，纽约那边还是 30 号
+    const at = new Date('2026-07-30T16:30:00Z')
+    expect(todayInZone(at, 'Asia/Shanghai')).toBe('2026-07-31')
+    expect(todayInZone(at, 'Europe/London')).toBe('2026-07-30')
+    expect(todayInZone(at, 'America/New_York')).toBe('2026-07-30')
+    expect(todayInZone(at, 'Pacific/Auckland')).toBe('2026-07-31')
+  })
+
+  it('跨夏令时也对（纽约 3 月 8 日切 EDT）', () => {
+    expect(todayInZone(new Date('2026-03-08T04:30:00Z'), 'America/New_York')).toBe('2026-03-07')
+    expect(todayInZone(new Date('2026-03-08T05:30:00Z'), 'America/New_York')).toBe('2026-03-08')
+  })
+})
+
+describe('isKnownTimeZone', () => {
+  it('认识 IANA 时区名', () => {
+    expect(isKnownTimeZone('Asia/Shanghai')).toBe(true)
+    expect(isKnownTimeZone('America/New_York')).toBe(true)
+    expect(isKnownTimeZone('UTC')).toBe(true)
+  })
+
+  it('不认识的一律拒绝，别往库里写垃圾', () => {
+    expect(isKnownTimeZone('Mars/Olympus')).toBe(false)
+    expect(isKnownTimeZone('')).toBe(false)
+    expect(isKnownTimeZone('北京时间')).toBe(false)
+  })
+})
+
+describe('formatClock', () => {
+  it('按本人时区显示 24 小时制，小时不补零（设计稿是「9:41」）', () => {
+    const at = '2026-07-30T01:41:00Z'
+    expect(formatClock(at, 'Asia/Shanghai')).toBe('9:41')
+    expect(formatClock(at, 'Europe/London')).toBe('2:41') // 七月是 BST，UTC+1
+  })
+
+  it('两位数小时正常显示', () => {
+    expect(formatClock('2026-07-30T14:05:00Z', 'Asia/Shanghai')).toBe('22:05')
+  })
+
+  it('时间戳不合法就返回空串，不显示 Invalid Date', () => {
+    expect(formatClock('不是时间', SH)).toBe('')
   })
 })
 
