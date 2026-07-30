@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * 设计系统的基座层。
+ * 只搬 styles.css 里 Tailwind preflight 没覆盖、又是全局生效的那几条；
+ * 组件层（.btn / .card / .seg / .table …）不搬 —— 按 dev-spec 第 2 节的
+ * 组件划分用 React + Tailwind 重建。
+ */
+@layer base {
+  html {
+    /* 设计稿是 368px 画布的移动端版面，禁掉 iOS 横屏字号膨胀 */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-paper text-ink font-body;
+    font-size: 15px; /* styles.css: body font-size */
+    line-height: 1.55;
+    font-weight: 400;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading tracking-ds-heading;
+    font-weight: 600; /* --font-heading-weight */
+    line-height: 1.12;
+  }
+
+  a {
+    @apply text-accent;
+    text-underline-offset: 3px;
+  }
+
+  /* 交互态一律主题化，绝不留浏览器默认蓝框 */
+  :focus {
+    outline: none;
+  }
+  :focus-visible {
+    @apply outline-accent;
+    outline: 2px solid;
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: rgb(0 136 176 / 0.3); /* accent 30% */
+  }
+}
+
+@layer components {
+  /**
+   * .halftone —— 设计系统的新闻纸网点半调，用于「界面里的图像」。
+   * 首页朋友横排走这个处理：克制、成排、像版面。
+   * （.cmyk 四色分色是给照片的展示级处理，需要 print-plates.js 的 SVG
+   *   滤镜 defs —— 那是 Claude Design 的运行时，不进本项目。）
+   */
+  .halftone {
+    position: relative;
+    overflow: hidden;
+    filter: grayscale(0.35) contrast(1.15);
+  }
+  .halftone::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: radial-gradient(circle, rgb(0 0 0 / 0.22) 30%, transparent 32%);
+    background-size: 3px 3px;
+    mix-blend-mode: multiply;
+  }
+
+  /* 横向滚动的朋友排：隐藏滚动条，保留惯性滚动 */
+  .scroll-x-clean {
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scroll-x-clean::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  /* PWA 独立窗口下的安全区。设计稿画死的 52px 状态栏 / 26px 指示条由此替代 */
+  .pt-safe {
+    padding-top: max(env(safe-area-inset-top), 12px);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* dev-spec 第 10 节：尊重 prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
