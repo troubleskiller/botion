@@ -46,6 +46,13 @@ from public.profiles p;
 comment on view public.public_status is
   '朋友能看到的全部内容：名字、头像键、体型档位、今日是否出刊、今日状态。没有任何原始打卡数据。';
 
--- 只有登录用户能读。anon 拿不到任何东西。
+-- 权限收到最小：登录用户只读，anon 什么都没有。
+--
+-- 两个 revoke 都是必要的。Supabase 给 public schema 配了
+--   alter default privileges in schema public grant all on tables to anon, authenticated;
+-- 所以新建的视图会自动带上 INSERT / UPDATE / DELETE / TRUNCATE。
+-- 这个视图的 select 列表里有子查询，本来就不是可更新视图，写进去只会报错 ——
+-- 但把写权限挂在一个隐私边界对象上是没必要的风险，直接收掉。
 revoke all on public.public_status from anon;
+revoke all on public.public_status from authenticated;
 grant select on public.public_status to authenticated;

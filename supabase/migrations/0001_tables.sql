@@ -22,26 +22,12 @@ stable
 set search_path = pg_catalog
 as $$ select ((now() at time zone coalesce(tz, 'Asia/Shanghai'))::date) $$;
 
-/**
- * 当前登录用户的「今天」。给 entries 的 RLS 日期窗口用 ——
- * 策略表达式里只拿得到 auth.uid()，所以时区要在这里查出来。
- * security definer：只返回一个 date，不漏任何数据，但不依赖调用方
- * 对 profiles 的读权限。
- */
-create or replace function public.user_today()
-returns date
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select public.zone_today((select p.time_zone from public.profiles p where p.id = auth.uid()))
-$$;
-
 comment on function public.zone_today(text) is
   '某个时区的日历日。与前端 lib/date.ts 的 todayInZone() 同源。';
-comment on function public.user_today() is
-  '当前登录用户自己时区里的今天。entries 的补卡窗口用它。';
+
+-- user_today() 要读 profiles，所以必须建在 profiles 之后 ——
+-- language sql 的函数体在创建时就会做依赖检查，提前建会直接报
+-- relation "public.profiles" does not exist。见本文件靠后的位置。
 
 -- ── 用户档案 ───────────────────────────────────────────────────────────
 create table if not exists public.profiles (
@@ -60,6 +46,27 @@ create table if not exists public.profiles (
 
 -- 老库补列（重跑迁移时用得上）
 alter table public.profiles add column if not exists time_zone text;
+
+/**
+ * 当前登录用户的「今天」。给 entries 的 RLS 日期窗口用 ——
+ * 策略表达式里只拿得到 auth.uid()，所以时区要在这里查出来。
+ * security definer：只返回一个 date，不漏任何数据，但不依赖调用方
+ * 对 profiles 的读权限。
+ *
+ * 必须建在 profiles 之后，见上面的说明。
+ */
+create or replace function public.user_today()
+returns date
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select public.zone_today((select p.time_zone from public.profiles p where p.id = auth.uid()))
+$$;
+
+comment on function public.user_today() is
+  '当前登录用户自己时区里的今天。entries 的补卡窗口用它。';
 
 -- ── 每日核心打卡（唯一影响小人状态的数据）──────────────────────────────
 create table if not exists public.entries (

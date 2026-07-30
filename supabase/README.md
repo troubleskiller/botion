@@ -24,10 +24,28 @@ done
 | `0003_public_status.sql` | 朋友视图 | 第 4.3 节 |
 | `0004_profile_trigger.sql` | 登录即建档 | 补 dev-spec 的缺口 |
 
-## 跑完之后
+## 先在本地验一遍（不需要 Supabase）
 
-`npm run verify:rls` 会用 service role 建两个测试账号，
-然后以普通用户身份逐条验证隐私边界（第 11 节验收第 1 条）。
+```bash
+npm run verify:sql
+```
+
+在本机 Postgres 的临时库里仿出 Supabase 的环境（`auth.uid()`、
+`anon` / `authenticated` 两个角色、`public` schema 的默认授权），
+跑一遍四个迁移，再撞每一条隐私边界 —— 62 项断言，覆盖第 11 节验收的
+第 1、2、4、5、6 条。跑完临时库就删掉，不碰任何已有的库。
+
+云端项目还没建就能先跑。它已经抓到过两个问题：`user_today()` 建在
+`profiles` 之前导致迁移直接报错，以及视图上多余的写权限。
+
+## 跑完之后（打真库）
+
+```bash
+npm run verify:rls
+```
+
+用 service role 建两个探针账号，以普通登录用户的身份再验一遍，
+外加视图字段白名单和按人存时区的交叉验证。跑完删掉探针账号。
 
 ## 与 dev-spec 的三处差异
 
