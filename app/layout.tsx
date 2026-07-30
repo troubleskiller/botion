@@ -25,7 +25,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
+  // 不锁 maximumScale —— 禁用缩放会挡掉低视力用户放大页面。
+  // iOS 输入框聚焦时的自动放大改用 16px 字号解决（见 login 页的注释）。
   themeColor: '#f3f2f2', // --color-bg
   viewportFit: 'cover', // 让 env(safe-area-inset-*) 生效
 }
