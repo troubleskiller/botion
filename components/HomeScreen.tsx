@@ -14,6 +14,7 @@ import { Masthead } from './Masthead'
 import { RevealOverlay } from './RevealOverlay'
 import { StageBlock } from './StageProgress'
 import { StateStamp } from './StateBadge'
+import { Toast } from './Toast'
 
 export type HomeScreenProps = {
   today: IsoDate
@@ -32,28 +33,44 @@ export type HomeScreenProps = {
 
 export function HomeScreen(props: HomeScreenProps) {
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [reveal, setReveal] = useState<{ issue: number; state: State } | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const [reveal, setReveal] = useState<{
+    issue: number
+    state: State
+    bands: BandValues
+  } | null>(null)
 
   // 出刊那一刻先用本地算出的状态，等 revalidate 回来的数据顶上。
   // computeState 和库里视图的 case 是同一套判定，不会打架。
+  // 分档值也一起本地留一份 —— 否则 revalidate 到达前的那一小段，
+  // state 是新的而 existing 还是旧的，副标题会显示成「睡 — · 水—」。
   const state = reveal !== null ? reveal.state : props.state
   const issue = reveal !== null ? reveal.issue : props.issue
   const published = state !== null
+  const todayBands = reveal !== null ? reveal.bands : props.existing[props.today]
 
   function onPublished(entry: BandValues & { date: IsoDate; wasNew: boolean }) {
     setSheetOpen(false)
-    if (entry.date !== props.today) return // 补的是昨天，首页不放出刊动画
+
+    if (entry.date !== props.today) {
+      // 补的是昨天：不放出刊动画（首页说的是今天这一期），但也不能没反应
+      setToast(entry.wasNew ? '昨天那期补上了' : '昨天那期改好了')
+      return
+    }
+
     setReveal({
       issue: entry.wasNew ? props.issue + 1 : props.issue,
       state: computeState(entry.sleepBand, entry.waterBand),
+      bands: entry,
     })
   }
 
-  const reason = published
-    ? `睡 ${sleepLabel(props.existing[props.today]?.sleepBand ?? 0)} · 水${waterLabel(
-        props.existing[props.today]?.waterBand ?? 0,
-      )}`
-    : '今天的这一期还空着'
+  const reason =
+    published && todayBands !== undefined
+      ? `睡 ${sleepLabel(todayBands.sleepBand)} · 水${waterLabel(todayBands.waterBand)}`
+      : published
+        ? '今天这期已经出了'
+        : '今天的这一期还空着'
 
   return (
     <div className="bg-paper flex h-dvh flex-col overflow-hidden">
@@ -149,6 +166,8 @@ export function HomeScreen(props: HomeScreenProps) {
           onDone={() => setReveal(null)}
         />
       ) : null}
+
+      {toast !== null ? <Toast message={toast} onDone={() => setToast(null)} /> : null}
     </div>
   )
 }
