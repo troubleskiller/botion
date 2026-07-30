@@ -9,7 +9,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify:rls": "node scripts/verify-rls.mjs"
+    "verify:rls": "node scripts/verify-rls.mjs",
+    "verify:avatars": "node scripts/verify-avatars.mjs",
+    "avatars:placeholder": "node scripts/make-placeholder-avatars.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
