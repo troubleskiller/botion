@@ -17,7 +17,8 @@
     "users:list": "node scripts/manage-users.mjs list",
     "users:add": "node scripts/manage-users.mjs add",
     "users:reset": "node scripts/manage-users.mjs reset",
-    "users:remove": "node scripts/manage-users.mjs remove"
+    "users:remove": "node scripts/manage-users.mjs remove",
+    "users:avatar": "node scripts/manage-users.mjs avatar"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

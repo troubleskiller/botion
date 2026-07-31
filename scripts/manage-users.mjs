@@ -4,6 +4,7 @@
  *   npm run users:list                     看现在有谁
  *   npm run users:add   邮箱 [显示名]        建号，打印一个随机密码
  *   npm run users:reset 邮箱 [密码]          重设密码；不给就随机生成一个
+ *   npm run users:avatar 邮箱 [套系名]        指派小人；不给套系名就是查看
  *   npm run users:remove 邮箱                删号（连同他的全部记录）
  *
  * 为什么是脚本而不是页面：dev-spec 第 0 节明确不做注册引导流程，而且这是
@@ -17,6 +18,7 @@
  */
 import { randomInt } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
+import { discoverSets } from './lib/avatar-sets.mjs'
 
 process.loadEnvFile('.env.local')
 
@@ -131,6 +133,44 @@ async function reset(email, chosen) {
   console.log('（旧密码立刻失效。他在其它设备上已登录的会话不受影响）')
 }
 
+/**
+ * 指派小人套系。素材放 public/avatars/{key}_1..4.png，
+ * 跑一次 npm run avatars:thumbs 生成缩略图，然后指给谁就是谁。
+ */
+async function avatar(email, key) {
+  const user = await findUser(email)
+  if (!user) {
+    console.error(`没有 ${email} 这个账号。`)
+    process.exit(1)
+  }
+
+  const { complete } = discoverSets()
+
+  if (!key) {
+    const { data: p } = await admin
+      .from('profiles')
+      .select('display_name, avatar_key')
+      .eq('id', user.id)
+      .maybeSingle()
+    console.log(`${p?.display_name ?? email} 现在用的是：${p?.avatar_key}`)
+    console.log(`可选的套系：${complete.join('、')}`)
+    console.log(`\n改：npm run users:avatar ${email} 套系名`)
+    return
+  }
+
+  if (!complete.includes(key)) {
+    console.error(`没有 ${key} 这套素材，或者它四档不齐。`)
+    console.error(`现有的：${complete.join('、') || '(一套都没有)'}`)
+    console.error(`\n加新的：把 ${key}_1.png ... ${key}_4.png 放进 public/avatars/，`)
+    console.error('规格见 public/avatars/README.md，然后跑 npm run avatars:thumbs')
+    process.exit(1)
+  }
+
+  const { error } = await admin.from('profiles').update({ avatar_key: key }).eq('id', user.id)
+  if (error) throw new Error(`指派失败：${error.message}`)
+  console.log(`${email} 的小人换成 ${key} 了。`)
+}
+
 async function remove(email) {
   const user = await findUser(email)
   if (!user) {
@@ -158,6 +198,10 @@ try {
       // 不给密码就随机生成一个；给了就用你指定的
       await reset(email, displayName)
       break
+    case 'avatar':
+      if (!email) throw new Error('用法：npm run users:avatar 邮箱 [套系名]')
+      await avatar(email, displayName)
+      break
     case 'remove':
       if (!email) throw new Error('用法：npm run users:remove 邮箱')
       await remove(email)
@@ -167,6 +211,7 @@ try {
       console.log('  npm run users:list')
       console.log('  npm run users:add    邮箱 [显示名]')
       console.log('  npm run users:reset  邮箱 [密码]')
+      console.log('  npm run users:avatar 邮箱 [套系名]   不给套系名就是查看当前的')
       console.log('  npm run users:remove 邮箱')
   }
 } catch (err) {

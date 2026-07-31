@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { SELF_AVATAR_KEY } from '@/lib/avatars'
 import { sleepLabel, waterLabel } from '@/lib/bands'
 import type { IsoDate } from '@/lib/date'
 import { computeState, type DailyState, type Stage, type State } from '@/lib/logic'
@@ -18,6 +17,8 @@ import { Toast } from './Toast'
 
 export type HomeScreenProps = {
   today: IsoDate
+  /** 本人的小人套系（profiles.avatar_key）。每个人可以不一样。 */
+  avatarKey: string
   yesterday: IsoDate
   /** 期号 = 连续出刊天数。0 表示还没出过刊。 */
   issue: number
@@ -95,7 +96,7 @@ export function HomeScreen(props: HomeScreenProps) {
 
           <div className="relative h-[312px] flex-1">
             <Avatar
-              avatarKey={SELF_AVATAR_KEY}
+              avatarKey={props.avatarKey}
               stage={props.stage}
               state={state}
               alt={published ? `我的小人，${props.stage} 档` : '我的小人，今天还没出刊'}
@@ -158,6 +159,7 @@ export function HomeScreen(props: HomeScreenProps) {
           issue={reveal.issue}
           state={reveal.state}
           stage={props.stage}
+          avatarKey={props.avatarKey}
           onDone={() => setReveal(null)}
         />
       ) : null}

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect } from 'react'
-import { SELF_AVATAR_KEY } from '@/lib/avatars'
 import { stateName, type Stage, type State } from '@/lib/logic'
 import { Avatar } from './Avatar'
 
@@ -31,11 +30,13 @@ export function RevealOverlay({
   issue,
   state,
   stage,
+  avatarKey,
   onDone,
 }: {
   issue: number
   state: State
   stage: Stage
+  avatarKey: string
   onDone: () => void
 }) {
   useEffect(() => {
@@ -52,7 +53,7 @@ export function RevealOverlay({
     >
       <div className="relative h-[400px] w-[200px]">
         <div className="animate-rise-in absolute inset-0">
-          <Avatar avatarKey={SELF_AVATAR_KEY} stage={stage} state={state} alt="" priority />
+          <Avatar avatarKey={avatarKey} stage={stage} state={state} alt="" priority />
         </div>
         <div
           className={`animate-stamp-in font-heading text-ds-26 rounded-ds-md absolute right-[-12px] top-[34px] inline-flex whitespace-nowrap border-2 border-current pb-[9px] pl-[14px] pr-[14px] pt-[8px] font-semibold ${STAMP_TONE[state]}`}

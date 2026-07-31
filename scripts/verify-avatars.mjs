@@ -13,10 +13,9 @@
  */
 import { existsSync, statSync } from 'node:fs'
 import sharp from 'sharp'
+import { AVATAR_DIR as DIR, STAGES, discoverSets } from './lib/avatar-sets.mjs'
 
-const DIR = 'public/avatars'
-const SETS = ['you', 'friend']
-const STAGES = [1, 2, 3, 4]
+const { complete: SETS, incomplete } = discoverSets()
 
 const CANVAS = { width: 512, height: 1024 }
 const FIGURE_HEIGHT = 921
@@ -77,6 +76,16 @@ async function measure(file) {
 const near = (a, b) => Math.abs(a - b) <= TOLERANCE
 
 async function main() {
+  if (SETS.length === 0) {
+    console.error(`${DIR} 里没有找到任何完整的套系（需要 {key}_1..4.png）。`)
+    console.error('规格见 public/avatars/README.md')
+    process.exit(1)
+  }
+  for (const { key, missing } of incomplete) {
+    check(`${key} 四档齐全`, false, `缺第 ${missing.join('、')} 档`)
+  }
+  console.log(`发现 ${SETS.length} 套：${SETS.join('、')}`)
+
   const missing = []
   for (const set of SETS) {
     for (const stage of STAGES) {

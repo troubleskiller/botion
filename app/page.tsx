@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import type { BandValues } from '@/components/CheckinSheet'
 import { HomeScreen } from '@/components/HomeScreen'
 import { TimeZoneSync } from '@/components/TimeZoneSync'
+import { DEFAULT_AVATAR_KEY } from '@/lib/avatars'
 import { formatClock, shiftDate, todayInZone, type IsoDate } from '@/lib/date'
 import { computeStage, computeState, computeStreak } from '@/lib/logic'
 import { createClient } from '@/lib/supabase/server'
@@ -28,7 +29,7 @@ export default async function HomePage() {
   if (user === null) redirect('/login')
 
   const [profileResult, statusResult] = await Promise.all([
-    supabase.from('profiles').select('time_zone').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('time_zone, avatar_key').eq('id', user.id).maybeSingle(),
     supabase
       .from('public_status')
       .select('user_id, display_name, avatar_key, stage, checked_in_today, state'),
@@ -39,6 +40,10 @@ export default async function HomePage() {
 
   const rawTimeZone: unknown = profileResult.data?.time_zone
   const timeZone = typeof rawTimeZone === 'string' && rawTimeZone !== '' ? rawTimeZone : null
+
+  const rawAvatarKey: unknown = profileResult.data?.avatar_key
+  const avatarKey =
+    typeof rawAvatarKey === 'string' && rawAvatarKey !== '' ? rawAvatarKey : DEFAULT_AVATAR_KEY
 
   const today = todayInZone(new Date(), timeZone)
   const yesterday = shiftDate(today, -1)
@@ -90,6 +95,7 @@ export default async function HomePage() {
       <TimeZoneSync needsDetection={timeZone === null} />
       <HomeScreen
         today={today}
+        avatarKey={avatarKey}
         yesterday={yesterday}
         issue={issue}
         stage={stage}

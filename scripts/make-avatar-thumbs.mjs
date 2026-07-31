@@ -18,13 +18,20 @@
  */
 import { mkdirSync } from 'node:fs'
 import sharp from 'sharp'
-
-const SRC = 'public/avatars'
-const OUT = 'public/avatars/thumb'
-const SETS = ['you', 'friend']
-const STAGES = [1, 2, 3, 4]
+import { AVATAR_DIR as SRC, THUMB_DIR as OUT, STAGES, discoverSets } from './lib/avatar-sets.mjs'
 
 export const THUMB = { width: 192, height: 384, quality: 88 }
+
+const { complete: SETS, incomplete } = discoverSets()
+
+if (SETS.length === 0) {
+  console.error(`${SRC} 里没有找到任何完整的套系（需要 {key}_1..4.png）。`)
+  process.exit(1)
+}
+for (const { key, missing } of incomplete) {
+  console.error(`  ! ${key} 缺第 ${missing.join('、')} 档，跳过`)
+}
+console.log(`发现 ${SETS.length} 套：${SETS.join('、')}\n`)
 
 mkdirSync(OUT, { recursive: true })
 
@@ -40,4 +47,4 @@ for (const set of SETS) {
   }
 }
 
-console.log(`\n8 张合计 ${Math.round(total / 1024)} KB（原图合计约 2200 KB）`)
+console.log(`\n${SETS.length * STAGES.length} 张合计 ${Math.round(total / 1024)} KB`)

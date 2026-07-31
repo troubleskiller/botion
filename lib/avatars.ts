@@ -12,7 +12,12 @@ import type { Stage } from './logic'
  * （0004 迁移里默认建成 friend）。等哪天有了逐人素材，
  * 只要把每个 profile 的 avatar_key 改掉，朋友横排自动生效。
  */
-export const SELF_AVATAR_KEY = 'you'
+/**
+ * 建档时的默认套系（0004 迁移里写死的也是它）。
+ * 每个人的实际套系存在 profiles.avatar_key，首页主位和朋友横排都读那个 ——
+ * 用 npm run users:avatar 邮箱 套系名 指派。这里只是兜底。
+ */
+export const DEFAULT_AVATAR_KEY = 'friend'
 
 export function avatarSrc(avatarKey: string, stage: Stage): string {
   return `/avatars/${avatarKey}_${stage}.png`
