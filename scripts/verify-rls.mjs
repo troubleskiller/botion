@@ -201,17 +201,32 @@ async function main() {
 
   // 用 service role 补历史记录 —— RLS 的日期窗口挡的是普通用户，
   // 这里是为了造出「累计 N 次」的历史，不是绕过隐私边界
+  //
+  // 前面已经写过两条 trained 的记录（今天 + 补的昨天），所以这里只补到
+  // 总数 19。别照着循环次数写断言 —— 之前就是这么错过一次。
+  const trainedCount = async () => {
+    const r = await admin.from('entries').select('id', { count: 'exact', head: true })
+      .eq('user_id', a.id).eq('trained', true)
+    return r.count ?? 0
+  }
+
+  const before = await trainedCount()
   const history = []
-  for (let i = 2; i < 20; i += 1) {
+  for (let i = 2; before + history.length < 19; i += 1) {
     history.push({ user_id: a.id, date: appToday(-i), sleep_band: 3, water_band: 2, trained: true })
   }
   await admin.from('entries').upsert(history, { onConflict: 'user_id,date' })
-  check('累计 19 次训练时还是 1 档', (await stageOf()) === 1, `实际 ${await stageOf()} 档`)
+
+  const at19 = await trainedCount()
+  check('累计 19 次训练时还是 1 档', at19 === 19 && (await stageOf()) === 1,
+    `累计 ${at19} 次，实际 ${await stageOf()} 档`)
 
   await admin.from('entries').upsert(
-    [{ user_id: a.id, date: appToday(-20), sleep_band: 3, water_band: 2, trained: true }],
+    [{ user_id: a.id, date: appToday(-(history.length + 2)), sleep_band: 3, water_band: 2, trained: true }],
     { onConflict: 'user_id,date' })
-  check('第 20 次跨到 2 档', (await stageOf()) === 2, `实际 ${await stageOf()} 档`)
+  const at20 = await trainedCount()
+  check('第 20 次跨到 2 档', at20 === 20 && (await stageOf()) === 2,
+    `累计 ${at20} 次，实际 ${await stageOf()} 档`)
 
   // 之后全是没练的日子 —— 档位必须不动
   const idle = []
