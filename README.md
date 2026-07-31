@@ -9,9 +9,25 @@
 
 ## 现在做到哪了
 
-**Phase 1 完成**（dev-spec 第 9 节）：建表 + RLS + 视图、Magic Link 登录、首页、打卡弹层、`lib/logic.ts` + 单元测试。
+**Phase 1 完成**（dev-spec 第 9 节）：建表 + RLS + 视图、登录、首页、打卡弹层、`lib/logic.ts` + 单元测试。已部署。
 
 Phase 2/3/4 一律没有提前实现。底部导航的「饮食 / 运动 / 我的」是禁用占位。
+
+## 账号
+
+**没有注册入口。** 这是 20 个人的封闭圈，账号一律在命令行里建，密码发给本人：
+
+```bash
+npm run users:add 朋友的邮箱 显示名     # 建号，打印一个随机密码
+npm run users:list                     # 看现在有谁、谁最近登录过
+npm run users:reset 朋友的邮箱          # 忘密码了走这里
+npm run users:remove 朋友的邮箱         # 删号（连同他的全部记录）
+```
+
+> 与 dev-spec 的偏离：第 1 节写的是 Magic Link，实际改成了邮箱 + 密码。
+> 连带影响是第 0 节说「不做」的两件事必须处理其一 —— 选择是
+> **不做注册引导**（后台建号）和 **不做账号找回**（后台重设），
+> 两件都留在命令行，界面上一个入口都没有。
 
 ## 跑起来
 
@@ -33,7 +49,9 @@ npm run dev
 | `npm run typecheck` | TypeScript 严格模式检查 |
 | `npm run verify:sql` | **不需要 Supabase** —— 在本机 Postgres 的临时库里跑一遍迁移并撞每一条隐私边界（62 项） |
 | `npm run verify:rls` | 打真库：用 service role 建两个探针账号验隐私边界（46 项），跑完删掉 |
-| `npm run verify:avatars` | 量小人素材的几何：画布 / 角色高度 / 基线 / 四档是否对齐 |
+| `npm run verify:avatars` | 量小人素材的几何：画布 / 角色高度 / 基线 / 四档是否对齐，以及朋友排缩略图是否等比 |
+| `npm run avatars:thumbs` | 重新生成朋友排的缩略图（改了原图之后要跑） |
+| `npm run users:*` | 账号管理，见上 |
 
 ## 三条不能破的线
 

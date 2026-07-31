@@ -13,7 +13,11 @@
     "verify:avatars": "node scripts/verify-avatars.mjs",
     "avatars:placeholder": "node scripts/make-placeholder-avatars.mjs",
     "verify:sql": "bash scripts/verify-sql.sh",
-    "avatars:thumbs": "node scripts/make-avatar-thumbs.mjs"
+    "avatars:thumbs": "node scripts/make-avatar-thumbs.mjs",
+    "users:list": "node scripts/manage-users.mjs list",
+    "users:add": "node scripts/manage-users.mjs add",
+    "users:reset": "node scripts/manage-users.mjs reset",
+    "users:remove": "node scripts/manage-users.mjs remove"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

@@ -11,7 +11,8 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from './lib/env'
  * 「在 iPhone 上添加到主屏后可以正常打开并保持登录」（第 11 节验收第 8 条）
  * 靠的就是这里：Cookie 会话每次请求都续期，独立窗口里也不会掉线。
  */
-const PUBLIC_PATHS = ['/login', '/auth']
+// 只有登录页对未登录开放。密码登录不走回调，所以没有 /auth。
+const PUBLIC_PATHS = ['/login']
 
 export default async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
