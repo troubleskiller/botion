@@ -15,7 +15,10 @@ type Phase =
   | { kind: 'idle' }
   | { kind: 'sending' }
   | { kind: 'sent'; email: string }
-  | { kind: 'failed'; message: string }
+  /** 邮件没发出去 */
+  | { kind: 'sendFailed'; message: string }
+  /** 邮件发出去了，但点回来的那条链接没通过校验 */
+  | { kind: 'linkFailed'; message: string }
 
 export default function LoginPage() {
   const searchParams = useSearchParams()
@@ -23,7 +26,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('')
   const [phase, setPhase] = useState<Phase>(
-    callbackError !== null ? { kind: 'failed', message: callbackError } : { kind: 'idle' },
+    callbackError !== null ? { kind: 'linkFailed', message: callbackError } : { kind: 'idle' },
   )
 
   async function send(event: React.FormEvent<HTMLFormElement>) {
@@ -39,7 +42,7 @@ export default function LoginPage() {
     })
 
     if (error !== null) {
-      setPhase({ kind: 'failed', message: error.message })
+      setPhase({ kind: 'sendFailed', message: error.message })
       return
     }
     setPhase({ kind: 'sent', email: address })
@@ -105,9 +108,17 @@ export default function LoginPage() {
             />
           </div>
 
-          {phase.kind === 'failed' ? (
+          {/* 两种失败说两种话：邮件没发出去，和链接点回来没通过校验 ——
+              修复办法完全不同（第 10 节：错误说清发生了什么和怎么修复） */}
+          {phase.kind === 'sendFailed' ? (
             <p role="alert" className="text-ds-12.5 mt-ds-2 text-accent2-700">
               没发出去：{phase.message}。检查一下邮箱地址，再点一次。
+            </p>
+          ) : null}
+          {phase.kind === 'linkFailed' ? (
+            <p role="alert" className="text-ds-12.5 mt-ds-2 text-accent2-700">
+              这条链接用不了：{phase.message}。链接只能用一次、而且要在发出它的这台设备上打开。
+              填邮箱重新发一条。
             </p>
           ) : null}
 
