@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { sleepLabel, waterLabel } from '@/lib/bands'
 import type { IsoDate } from '@/lib/date'
-import { computeState, type DailyState, type Stage, type State } from '@/lib/logic'
+import { computeStage, computeState, type DailyState, type Stage, type State } from '@/lib/logic'
 import type { PublicStatusRow } from '@/lib/types'
 import { Avatar } from './Avatar'
 import { BottomNav } from './BottomNav'
@@ -12,6 +12,7 @@ import { FriendRow } from './FriendRow'
 import { Masthead } from './Masthead'
 import { RevealOverlay } from './RevealOverlay'
 import { StageBlock } from './StageProgress'
+import { StageUpOverlay } from './StageUpOverlay'
 import { StateStamp } from './StateBadge'
 import { Toast } from './Toast'
 
@@ -40,6 +41,12 @@ export function HomeScreen(props: HomeScreenProps) {
     state: State
     bands: BandValues
   } | null>(null)
+  // 升档排在出刊页之后放 —— 先给「这一期出了」，再给「你长开了」
+  const [stageUp, setStageUp] = useState<{
+    from: Stage
+    to: Stage
+    total: number
+  } | null>(null)
 
   // 出刊那一刻先用本地算出的状态，等 revalidate 回来的数据顶上。
   // computeState 和库里视图的 case 是同一套判定，不会打架。
@@ -50,8 +57,17 @@ export function HomeScreen(props: HomeScreenProps) {
   const published = state !== null
   const todayBands = reveal !== null ? reveal.bands : props.existing[props.today]
 
-  function onPublished(entry: BandValues & { date: IsoDate; wasNew: boolean }) {
+  function onPublished(
+    entry: BandValues & { date: IsoDate; wasNew: boolean; totalTrainedDays: number },
+  ) {
     setSheetOpen(false)
+
+    // 跨档了就记下来，等出刊页放完再接上（补昨天的也算 —— 累计次数是累计次数）
+    const before = computeStage(props.totalTrainedDays)
+    const after = computeStage(entry.totalTrainedDays)
+    if (after > before) {
+      setStageUp({ from: before, to: after, total: entry.totalTrainedDays })
+    }
 
     if (entry.date !== props.today) {
       // 补的是昨天：不放出刊动画（首页说的是今天这一期），但也不能没反应
@@ -165,6 +181,17 @@ export function HomeScreen(props: HomeScreenProps) {
       ) : null}
 
       {toast !== null ? <Toast message={toast} onDone={() => setToast(null)} /> : null}
+
+      {/* 出刊页放完了才轮到升档 —— 两个全屏叠一起会互相盖掉 */}
+      {reveal === null && stageUp !== null ? (
+        <StageUpOverlay
+          from={stageUp.from}
+          to={stageUp.to}
+          avatarKey={props.avatarKey}
+          totalTrainedDays={stageUp.total}
+          onDone={() => setStageUp(null)}
+        />
+      ) : null}
     </div>
   )
 }

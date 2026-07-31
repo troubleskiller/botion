@@ -34,7 +34,9 @@ export function CheckinSheet({
   yesterday: IsoDate
   existing: Partial<Record<IsoDate, BandValues>>
   onClose: () => void
-  onPublished: (published: BandValues & { date: IsoDate; wasNew: boolean }) => void
+  onPublished: (
+    published: BandValues & { date: IsoDate; wasNew: boolean; totalTrainedDays: number },
+  ) => void
 }) {
   const [targetDate, setTargetDate] = useState<IsoDate>(today)
   const [sleep, setSleep] = useState<SleepBand | null>(existing[today]?.sleepBand ?? null)
@@ -91,6 +93,7 @@ export function CheckinSheet({
       waterBand: water,
       trained,
       wasNew: existing[targetDate] === undefined,
+      totalTrainedDays: result.totalTrainedDays,
     })
   }
 

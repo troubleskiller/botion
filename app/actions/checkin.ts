@@ -4,7 +4,9 @@ import { revalidatePath } from 'next/cache'
 import { isWritableDate, todayInZone, type IsoDate } from '@/lib/date'
 import { createClient } from '@/lib/supabase/server'
 
-export type PublishResult = { ok: true } | { ok: false; message: string }
+export type PublishResult =
+  | { ok: true; totalTrainedDays: number }
+  | { ok: false; message: string }
 
 export type PublishInput = {
   date: IsoDate
@@ -72,6 +74,15 @@ export async function publishEntry(input: PublishInput): Promise<PublishResult> 
     return { ok: false, message: `没存上：${error.message}` }
   }
 
+  // 写完再数一次累计训练次数 —— 前端靠它判断有没有跨档。
+  // 不在前端自己加一，因为「把没练改成练了」和「新出一期」加的不一样，
+  // 而且补的是昨天的话也会影响累计。让库说了算最省心。
+  const { count } = await supabase
+    .from('entries')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('trained', true)
+
   revalidatePath('/')
-  return { ok: true }
+  return { ok: true, totalTrainedDays: count ?? 0 }
 }
