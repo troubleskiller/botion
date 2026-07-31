@@ -141,7 +141,7 @@ export function HomeScreen(props: HomeScreenProps) {
         <FriendRow friends={props.friends} />
       </div>
 
-      <BottomNav onPublish={() => setSheetOpen(true)} />
+      <BottomNav current="home" onPublish={() => setSheetOpen(true)} />
       <div className="pb-safe bg-paper flex-none" />
 
       {sheetOpen ? (
