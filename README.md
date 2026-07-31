@@ -4,6 +4,7 @@
 
 一个封闭朋友圈的健身打卡 PWA。设计上只服务一件事：**让朋友们连续用满 10 天**。
 
+- **接手开发先读 [`AGENTS.md`](./AGENTS.md)** —— 约束、必须同步改的地方、已知的坑
 - 产品与数据规则：[`dev-spec.md`](./dev-spec.md)
 - 视觉规格：Claude Design 项目「练报设计原型」（设计 token 已提取进 `tailwind.config.ts`）
 
