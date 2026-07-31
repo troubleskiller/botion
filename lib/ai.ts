@@ -68,12 +68,16 @@ type CallOptions = {
 }
 
 async function call(messages: AiMessage[], options: CallOptions, json: boolean): Promise<string> {
+  // 先取密钥再进 try —— 放进去的话「缺 AI_API_KEY」会被下面的 catch
+  // 改写成「模型连不上」，把真正的原因盖掉。这个坑踩过一次。
+  const key = apiKey()
+
   let response: Response
   try {
     response = await fetch(`${BASE_URL}/v1/chat/completions`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey()}`,
+        Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
