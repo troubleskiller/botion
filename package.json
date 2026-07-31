@@ -12,7 +12,8 @@
     "verify:rls": "node scripts/verify-rls.mjs",
     "verify:avatars": "node scripts/verify-avatars.mjs",
     "avatars:placeholder": "node scripts/make-placeholder-avatars.mjs",
-    "verify:sql": "bash scripts/verify-sql.sh"
+    "verify:sql": "bash scripts/verify-sql.sh",
+    "avatars:thumbs": "node scripts/make-avatar-thumbs.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

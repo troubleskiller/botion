@@ -1,5 +1,10 @@
 import type { CSSProperties } from 'react'
-import { AVATAR_INTRINSIC, avatarSrc } from '@/lib/avatars'
+import {
+  AVATAR_INTRINSIC,
+  AVATAR_THUMB_INTRINSIC,
+  avatarSrc,
+  avatarThumbSrc,
+} from '@/lib/avatars'
 import type { DailyState, Stage } from '@/lib/logic'
 
 /**
@@ -28,6 +33,7 @@ export function Avatar({
   alt,
   className,
   priority = false,
+  thumb = false,
 }: {
   avatarKey: string
   stage: Stage
@@ -36,12 +42,16 @@ export function Avatar({
   alt: string
   className?: string
   priority?: boolean
+  /** 朋友排用：换成 192×384 的 WebP 缩略图，约 16 KB 而不是 300 KB */
+  thumb?: boolean
 }) {
+  const intrinsic = thumb ? AVATAR_THUMB_INTRINSIC : AVATAR_INTRINSIC
+
   return (
     <img
-      src={avatarSrc(avatarKey, stage)}
-      width={AVATAR_INTRINSIC.width}
-      height={AVATAR_INTRINSIC.height}
+      src={thumb ? avatarThumbSrc(avatarKey, stage) : avatarSrc(avatarKey, stage)}
+      width={intrinsic.width}
+      height={intrinsic.height}
       alt={alt}
       loading={priority ? 'eager' : 'lazy'}
       decoding={priority ? 'sync' : 'async'}

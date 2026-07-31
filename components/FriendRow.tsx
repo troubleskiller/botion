@@ -61,6 +61,8 @@ function FriendThumb({ friend }: { friend: PublicStatusRow }) {
           /* 图像本身不承载信息 —— 名字和状态在下面的文本里，
              重复念一遍只会让读屏更啰嗦 */
           alt=""
+          /* 只画到 48×96 CSS px，用 16 KB 的缩略图而不是 300 KB 的原图 */
+          thumb
         />
       </div>
       <div className="text-ds-12 mt-[7px] whitespace-nowrap leading-none">

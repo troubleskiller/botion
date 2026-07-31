@@ -11,7 +11,7 @@
  *
  *   node scripts/verify-avatars.mjs
  */
-import { existsSync } from 'node:fs'
+import { existsSync, statSync } from 'node:fs'
 import sharp from 'sharp'
 
 const DIR = 'public/avatars'
@@ -130,6 +130,67 @@ async function main() {
         measured
           .map((m) => `${m.stage} 档 顶${m.top} 底${m.baseline} 高${m.figureHeight} 宽${m.right - m.left + 1}`)
           .join('\n    '),
+    )
+  }
+
+  // ── 朋友排的缩略图 ────────────────────────────────────────────────────
+  // 缩略图是等比缩放出来的，所以基线位置按比例必须和原图一致 ——
+  // 不一致就说明生成脚本改错了，朋友排切档时会跳。
+  const THUMB = { width: 192, height: 384 }
+  const scale = THUMB.width / CANVAS.width
+
+  console.log('\n缩略图（朋友排用）')
+  const missingThumbs = []
+  for (const set of SETS) {
+    for (const stage of STAGES) {
+      const file = `${DIR}/thumb/${set}_${stage}.webp`
+      if (!existsSync(file)) missingThumbs.push(file)
+    }
+  }
+
+  if (missingThumbs.length > 0) {
+    check('缩略图齐全', false, `缺 ${missingThumbs.length} 张 —— 跑 npm run avatars:thumbs`)
+  } else {
+    let thumbBytes = 0
+    for (const set of SETS) {
+      const measured = []
+      for (const stage of STAGES) {
+        const file = `${DIR}/thumb/${set}_${stage}.webp`
+        const m = await measure(file)
+        measured.push({ stage, ...m })
+        thumbBytes += statSync(file).size
+
+        check(
+          `${set}_${stage} 缩略图 ${THUMB.width}×${THUMB.height}`,
+          m.width === THUMB.width && m.height === THUMB.height,
+          `实际 ${m.width}×${m.height}`,
+        )
+        // 基线按比例：973 × (192/512) = 364.875
+        const expectedBaseline = BASELINE * scale
+        check(
+          `${set}_${stage} 缩略图基线按比例落在 y≈${Math.round(expectedBaseline)}`,
+          Math.abs(m.baseline - expectedBaseline) <= TOLERANCE,
+          `实际 y=${m.baseline}`,
+        )
+      }
+
+      const tops = measured.map((m) => m.top)
+      const baselines = measured.map((m) => m.baseline)
+      check(
+        `${set} 缩略图四档头顶对齐（偏差 ${Math.max(...tops) - Math.min(...tops)}px）`,
+        Math.max(...tops) - Math.min(...tops) <= TOLERANCE,
+      )
+      check(
+        `${set} 缩略图四档脚底对齐（偏差 ${Math.max(...baselines) - Math.min(...baselines)}px）`,
+        Math.max(...baselines) - Math.min(...baselines) <= TOLERANCE,
+      )
+    }
+
+    const srcBytes = SETS.flatMap((s) => STAGES.map((n) => statSync(`${DIR}/${s}_${n}.png`).size))
+      .reduce((a, b) => a + b, 0)
+    console.log(
+      `    8 张缩略图合计 ${Math.round(thumbBytes / 1024)} KB` +
+        `（原图 ${Math.round(srcBytes / 1024)} KB，省了 ${Math.round((1 - thumbBytes / srcBytes) * 100)}%）`,
     )
   }
 
