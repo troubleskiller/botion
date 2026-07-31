@@ -17,15 +17,15 @@ export type NavKey = 'home' | 'meals' | 'workouts' | 'progress'
 
 const READY: Record<NavKey, boolean> = {
   home: true,
-  meals: false,
+  meals: true,
   workouts: true,
-  progress: false,
+  progress: true,
 }
 
 const HREF: Record<NavKey, string> = {
   home: '/',
   meals: '/meals',
-  workouts: '/plan', // TODO 运动记录页做好后改回 /workouts，计划页从那里进
+  workouts: '/workouts',
   progress: '/progress',
 }
 
